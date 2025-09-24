@@ -1,0 +1,871 @@
+-- Angel Transform Script với UI Skills góc phải
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Debris = game:GetService("Debris")
+local Lighting = game:GetService("Lighting")
+
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local RootPart = Character:WaitForChild("HumanoidRootPart")
+
+-- Variables
+local isAngel = false
+local wings = {}
+local halo = nil
+local divineAura = nil
+local skillCooldowns = {}
+
+-- Create Main UI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "AngelTransformGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+
+-- Transform Button (Center Bottom)
+local TransformContainer = Instance.new("Frame")
+TransformContainer.Size = UDim2.new(0, 120, 0, 120)
+TransformContainer.Position = UDim2.new(0.5, -60, 0.9, -130)
+TransformContainer.BackgroundTransparency = 1
+TransformContainer.Parent = ScreenGui
+
+-- Glowing Ring Effect
+local GlowRing = Instance.new("ImageLabel")
+GlowRing.Size = UDim2.new(1.4, 0, 1.4, 0)
+GlowRing.Position = UDim2.new(-0.2, 0, -0.2, 0)
+GlowRing.BackgroundTransparency = 1
+GlowRing.Image = "rbxasset://textures/ui/LuaApp/graphic/CircleButtonBackground.png"
+GlowRing.ImageColor3 = Color3.fromRGB(255, 215, 0)
+GlowRing.Parent = TransformContainer
+
+-- Main Transform Button
+local TransformButton = Instance.new("TextButton")
+TransformButton.Size = UDim2.new(1, 0, 1, 0)
+TransformButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+TransformButton.Text = ""
+TransformButton.Parent = TransformContainer
+
+local ButtonGradient = Instance.new("UIGradient")
+ButtonGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 215, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 200))
+}
+ButtonGradient.Rotation = 90
+ButtonGradient.Parent = TransformButton
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0.5, 0)
+ButtonCorner.Parent = TransformButton
+
+local ButtonStroke = Instance.new("UIStroke")
+ButtonStroke.Color = Color3.fromRGB(255, 215, 0)
+ButtonStroke.Thickness = 3
+ButtonStroke.Transparency = 0.2
+ButtonStroke.Parent = TransformButton
+
+-- Button Icon
+local ButtonIcon = Instance.new("TextLabel")
+ButtonIcon.Size = UDim2.new(0.7, 0, 0.7, 0)
+ButtonIcon.Position = UDim2.new(0.15, 0, 0.15, 0)
+ButtonIcon.BackgroundTransparency = 1
+ButtonIcon.Text = "👼"
+ButtonIcon.TextScaled = true
+ButtonIcon.Parent = TransformButton
+
+-- Button Label
+local ButtonLabel = Instance.new("TextLabel")
+ButtonLabel.Size = UDim2.new(1.5, 0, 0.25, 0)
+ButtonLabel.Position = UDim2.new(-0.25, 0, 1.05, 0)
+ButtonLabel.BackgroundTransparency = 1
+ButtonLabel.Text = "ANGEL MODE"
+ButtonLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+ButtonLabel.TextScaled = true
+ButtonLabel.Font = Enum.Font.SourceSansBold
+ButtonLabel.TextStrokeTransparency = 0.5
+ButtonLabel.TextStrokeColor3 = Color3.fromRGB(255, 215, 0)
+ButtonLabel.Parent = TransformContainer
+
+-- Skills Panel (Right Side)
+local SkillsPanel = Instance.new("Frame")
+SkillsPanel.Size = UDim2.new(0, 350, 0, 400)
+SkillsPanel.Position = UDim2.new(1, -370, 0.5, -200)
+SkillsPanel.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+SkillsPanel.BackgroundTransparency = 0.1
+SkillsPanel.Visible = false
+SkillsPanel.Parent = ScreenGui
+
+local PanelGradient = Instance.new("UIGradient")
+PanelGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 200, 255))
+}
+PanelGradient.Rotation = 45
+PanelGradient.Parent = SkillsPanel
+
+local PanelCorner = Instance.new("UICorner")
+PanelCorner.CornerRadius = UDim.new(0, 20)
+PanelCorner.Parent = SkillsPanel
+
+local PanelStroke = Instance.new("UIStroke")
+PanelStroke.Color = Color3.fromRGB(255, 215, 0)
+PanelStroke.Thickness = 2
+PanelStroke.Transparency = 0.3
+PanelStroke.Parent = SkillsPanel
+
+-- Panel Title
+local PanelTitle = Instance.new("TextLabel")
+PanelTitle.Size = UDim2.new(1, 0, 0, 50)
+PanelTitle.BackgroundTransparency = 1
+PanelTitle.Text = "✨ DIVINE POWERS ✨"
+PanelTitle.TextColor3 = Color3.fromRGB(255, 215, 0)
+PanelTitle.TextScaled = true
+PanelTitle.Font = Enum.Font.SourceSansBold
+PanelTitle.TextStrokeTransparency = 0.8
+PanelTitle.Parent = SkillsPanel
+
+-- Skills Data
+local skillsData = {
+    {
+        name = "Holy Light",
+        icon = "☀️",
+        key = "Q",
+        color = Color3.fromRGB(255, 255, 100),
+        cooldown = 3,
+        description = "Blast of divine light"
+    },
+    {
+        name = "Divine Shield",
+        icon = "🛡️",
+        key = "E",
+        color = Color3.fromRGB(100, 200, 255),
+        cooldown = 5,
+        description = "Protective barrier"
+    },
+    {
+        name = "Healing Aura",
+        icon = "💚",
+        key = "R",
+        color = Color3.fromRGB(100, 255, 100),
+        cooldown = 4,
+        description = "Heal nearby allies"
+    },
+    {
+        name = "Heaven's Gate",
+        icon = "🚪",
+        key = "F",
+        color = Color3.fromRGB(255, 200, 255),
+        cooldown = 10,
+        description = "Teleport to heaven"
+    },
+    {
+        name = "Angel Wings",
+        icon = "🕊️",
+        key = "X",
+        color = Color3.fromRGB(255, 255, 255),
+        cooldown = 2,
+        description = "Toggle flight mode"
+    },
+    {
+        name = "Purify",
+        icon = "✨",
+        key = "C",
+        color = Color3.fromRGB(200, 100, 255),
+        cooldown = 6,
+        description = "Remove all debuffs"
+    }
+}
+
+-- Create Skill Buttons
+local skills = {}
+for i, skillData in ipairs(skillsData) do
+    local row = math.floor((i-1) / 2)
+    local col = (i-1) % 2
+    
+    local SkillFrame = Instance.new("Frame")
+    SkillFrame.Size = UDim2.new(0, 150, 0, 100)
+    SkillFrame.Position = UDim2.new(0, 20 + col * 160, 0, 70 + row * 110)
+    SkillFrame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SkillFrame.Parent = SkillsPanel
+    
+    local SkillGradient = Instance.new("UIGradient")
+    SkillGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, skillData.color),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
+    }
+    SkillGradient.Rotation = 135
+    SkillGradient.Parent = SkillFrame
+    
+    local SkillCorner = Instance.new("UICorner")
+    SkillCorner.CornerRadius = UDim.new(0, 15)
+    SkillCorner.Parent = SkillFrame
+    
+    local SkillButton = Instance.new("TextButton")
+    SkillButton.Size = UDim2.new(1, 0, 1, 0)
+    SkillButton.BackgroundTransparency = 1
+    SkillButton.Text = ""
+    SkillButton.Parent = SkillFrame
+    
+    -- Skill Icon
+    local SkillIcon = Instance.new("TextLabel")
+    SkillIcon.Size = UDim2.new(0.4, 0, 0.4, 0)
+    SkillIcon.Position = UDim2.new(0.05, 0, 0.1, 0)
+    SkillIcon.BackgroundTransparency = 1
+    SkillIcon.Text = skillData.icon
+    SkillIcon.TextScaled = true
+    SkillIcon.Parent = SkillFrame
+    
+    -- Skill Name
+    local SkillName = Instance.new("TextLabel")
+    SkillName.Size = UDim2.new(0.5, 0, 0.25, 0)
+    SkillName.Position = UDim2.new(0.45, 0, 0.15, 0)
+    SkillName.BackgroundTransparency = 1
+    SkillName.Text = skillData.name
+    SkillName.TextColor3 = Color3.fromRGB(50, 50, 50)
+    SkillName.TextScaled = true
+    SkillName.Font = Enum.Font.SourceSansBold
+    SkillName.Parent = SkillFrame
+    
+    -- Key Indicator
+    local KeyIndicator = Instance.new("Frame")
+    KeyIndicator.Size = UDim2.new(0, 30, 0, 30)
+    KeyIndicator.Position = UDim2.new(1, -40, 0, 10)
+    KeyIndicator.BackgroundColor3 = skillData.color
+    KeyIndicator.Parent = SkillFrame
+    
+    local KeyCorner = Instance.new("UICorner")
+    KeyCorner.CornerRadius = UDim.new(0.3, 0)
+    KeyCorner.Parent = KeyIndicator
+    
+    local KeyText = Instance.new("TextLabel")
+    KeyText.Size = UDim2.new(1, 0, 1, 0)
+    KeyText.BackgroundTransparency = 1
+    KeyText.Text = skillData.key
+    KeyText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyText.TextScaled = true
+    KeyText.Font = Enum.Font.SourceSansBold
+    KeyText.Parent = KeyIndicator
+    
+    -- Description
+    local SkillDesc = Instance.new("TextLabel")
+    SkillDesc.Size = UDim2.new(0.9, 0, 0.3, 0)
+    SkillDesc.Position = UDim2.new(0.05, 0, 0.6, 0)
+    SkillDesc.BackgroundTransparency = 1
+    SkillDesc.Text = skillData.description
+    SkillDesc.TextColor3 = Color3.fromRGB(100, 100, 100)
+    SkillDesc.TextScaled = true
+    SkillDesc.Font = Enum.Font.SourceSans
+    SkillDesc.Parent = SkillFrame
+    
+    -- Cooldown Display
+    local CooldownLabel = Instance.new("TextLabel")
+    CooldownLabel.Size = UDim2.new(1, 0, 1, 0)
+    CooldownLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    CooldownLabel.BackgroundTransparency = 0.5
+    CooldownLabel.Text = ""
+    CooldownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CooldownLabel.TextScaled = true
+    CooldownLabel.Font = Enum.Font.SourceSansBold
+    CooldownLabel.Visible = false
+    CooldownLabel.Parent = SkillFrame
+    
+    local CooldownCorner = Instance.new("UICorner")
+    CooldownCorner.CornerRadius = UDim.new(0, 15)
+    CooldownCorner.Parent = CooldownLabel
+    
+    skills[skillData.key] = {
+        button = SkillButton,
+        frame = SkillFrame,
+        data = skillData,
+        cooldownLabel = CooldownLabel
+    }
+    
+    -- Hover Effect
+    SkillButton.MouseEnter:Connect(function()
+        local tween = TweenService:Create(
+            SkillFrame,
+            TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+            {Size = UDim2.new(0, 160, 0, 110)}
+        )
+        tween:Play()
+    end)
+    
+    SkillButton.MouseLeave:Connect(function()
+        local tween = TweenService:Create(
+            SkillFrame,
+            TweenInfo.new(0.2, Enum.EasingStyle.Quad),
+            {Size = UDim2.new(0, 150, 0, 100)}
+        )
+        tween:Play()
+    end)
+end
+
+-- Transform Functions
+local function createHalo()
+    halo = Instance.new("Part")
+    halo.Name = "AngelHalo"
+    halo.Size = Vector3.new(2, 0.2, 2)
+    halo.Shape = Enum.PartType.Cylinder
+    halo.Material = Enum.Material.Neon
+    halo.BrickColor = BrickColor.new("New Yeller")
+    halo.CanCollide = false
+    halo.Parent = Character
+    
+    local haloWeld = Instance.new("Weld")
+    haloWeld.Part0 = Character.Head
+    haloWeld.Part1 = halo
+    haloWeld.C0 = CFrame.new(0, 1.5, 0) * CFrame.Angles(math.rad(90), 0, 0)
+    haloWeld.Parent = halo
+    
+    -- Halo glow
+    local pointLight = Instance.new("PointLight")
+    pointLight.Brightness = 2
+    pointLight.Color = Color3.fromRGB(255, 255, 0)
+    pointLight.Range = 10
+    pointLight.Parent = halo
+    
+    -- Rotating animation
+    spawn(function()
+        while halo and halo.Parent do
+            haloWeld.C0 = haloWeld.C0 * CFrame.Angles(0, math.rad(2), 0)
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+local function createWings()
+    -- Left Wing
+    local leftWing = Instance.new("Part")
+    leftWing.Name = "LeftWing"
+    leftWing.Size = Vector3.new(3, 5, 0.5)
+    leftWing.Material = Enum.Material.Neon
+    leftWing.BrickColor = BrickColor.new("White")
+    leftWing.Transparency = 0.3
+    leftWing.CanCollide = false
+    leftWing.Parent = Character
+    
+    local leftWingMesh = Instance.new("SpecialMesh")
+    leftWingMesh.MeshType = Enum.MeshType.Brick
+    leftWingMesh.Scale = Vector3.new(1, 1.5, 0.1)
+    leftWingMesh.Parent = leftWing
+    
+    local leftWeld = Instance.new("Weld")
+    leftWeld.Part0 = RootPart
+    leftWeld.Part1 = leftWing
+    leftWeld.C0 = CFrame.new(-2, 0, 1) * CFrame.Angles(0, math.rad(-20), 0)
+    leftWeld.Parent = leftWing
+    
+    -- Right Wing
+    local rightWing = leftWing:Clone()
+    rightWing.Name = "RightWing"
+    rightWing.Parent = Character
+    
+    local rightWeld = Instance.new("Weld")
+    rightWeld.Part0 = RootPart
+    rightWeld.Part1 = rightWing
+    rightWeld.C0 = CFrame.new(2, 0, 1) * CFrame.Angles(0, math.rad(20), 0)
+    rightWeld.Parent = rightWing
+    
+    -- Add feather particles
+    for _, wing in pairs({leftWing, rightWing}) do
+        local feathers = Instance.new("ParticleEmitter")
+        feathers.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+        feathers.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+        feathers.Rate = 5
+        feathers.Lifetime = NumberRange.new(2, 3)
+        feathers.Speed = NumberRange.new(2)
+        feathers.SpreadAngle = Vector2.new(10, 10)
+        feathers.Parent = wing
+    end
+    
+    wings = {left = leftWing, right = rightWing, leftWeld = leftWeld, rightWeld = rightWeld}
+    
+    -- Wing flap animation
+    spawn(function()
+        while wings.left and wings.left.Parent do
+            local t = tick()
+            local flap = math.sin(t * 2) * 0.3
+            wings.leftWeld.C0 = CFrame.new(-2, flap, 1) * CFrame.Angles(0, math.rad(-20 - flap * 20), 0)
+            wings.rightWeld.C0 = CFrame.new(2, flap, 1) * CFrame.Angles(0, math.rad(20 + flap * 20), 0)
+            RunService.Heartbeat:Wait()
+        end
+    end)
+end
+
+local function createDivineAura()
+    divineAura = Instance.new("Part")
+    divineAura.Name = "DivineAura"
+    divineAura.Size = Vector3.new(0.1, 0.1, 0.1)
+    divineAura.Transparency = 1
+    divineAura.CanCollide = false
+    divineAura.Parent = Character
+    
+    local auraWeld = Instance.new("Weld")
+    auraWeld.Part0 = RootPart
+    auraWeld.Part1 = divineAura
+    auraWeld.Parent = divineAura
+    
+    -- Divine particles
+    local particles = Instance.new("ParticleEmitter")
+    particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    particles.Color = ColorSequence.new(Color3.fromRGB(255, 255, 200))
+    particles.Rate = 50
+    particles.Lifetime = NumberRange.new(1, 2)
+    particles.Speed = NumberRange.new(3)
+    particles.SpreadAngle = Vector2.new(360, 360)
+    particles.VelocityInheritance = 0.5
+    particles.Parent = divineAura
+    
+    -- Light aura
+    local light = Instance.new("PointLight")
+    light.Brightness = 3
+    light.Color = Color3.fromRGB(255, 255, 200)
+    light.Range = 20
+    light.Parent = divineAura
+end
+
+local function transformToAngel()
+    -- Change character appearance
+    for _, part in pairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Parent:IsA("Model") then
+            part.Material = Enum.Material.Neon
+            part.BrickColor = BrickColor.new("White")
+            if part.Name == "Head" then
+                part.BrickColor = BrickColor.new("Light yellow")
+            end
+        end
+    end
+    
+    -- Add angel features
+    createHalo()
+    createWings()
+    createDivineAura()
+    
+    -- Modify properties
+    Humanoid.WalkSpeed = 30
+    Humanoid.JumpPower = 80
+    
+    -- Show skills panel
+    SkillsPanel.Visible = true
+    
+    -- Bright atmosphere
+    local bloom = Instance.new("BloomEffect")
+    bloom.Name = "AngelBloom"
+    bloom.Intensity = 0.5
+    bloom.Size = 24
+    bloom.Threshold = 0.8
+    bloom.Parent = Lighting
+    
+    local colorCorrection = Instance.new("ColorCorrectionEffect")
+    colorCorrection.Name = "AngelCorrection"
+    colorCorrection.Brightness = 0.1
+    colorCorrection.Contrast = 0.1
+    colorCorrection.TintColor = Color3.fromRGB(255, 255, 240)
+    colorCorrection.Parent = Lighting
+end
+
+local function revertFromAngel()
+    -- Reset appearance
+    for _, part in pairs(Character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Parent:IsA("Model") then
+            part.Material = Enum.Material.Plastic
+            part.BrickColor = BrickColor.new("Light orange")
+        end
+    end
+    
+    -- Remove angel features
+    if halo then halo:Destroy() halo = nil end
+    if wings.left then wings.left:Destroy() end
+    if wings.right then wings.right:Destroy() end
+    wings = {}
+    if divineAura then divineAura:Destroy() divineAura = nil end
+    
+    -- Reset properties
+    Humanoid.WalkSpeed = 16
+    Humanoid.JumpPower = 50
+    
+    -- Hide skills panel
+    SkillsPanel.Visible = false
+    
+    -- Remove effects
+    if Lighting:FindFirstChild("AngelBloom") then
+        Lighting.AngelBloom:Destroy()
+    end
+    if Lighting:FindFirstChild("AngelCorrection") then
+        Lighting.AngelCorrection:Destroy()
+    end
+end
+
+-- Skill Functions
+local function setCooldown(key, duration)
+    if skillCooldowns[key] then return end
+    skillCooldowns[key] = true
+    
+    local skill = skills[key]
+    if skill then
+        skill.cooldownLabel.Visible = true
+        
+        for i = duration, 0, -0.1 do
+            skill.cooldownLabel.Text = string.format("%.1f", i)
+            wait(0.1)
+        end
+        
+        skill.cooldownLabel.Visible = false
+    end
+    
+    skillCooldowns[key] = nil
+end
+
+local function holyLight()
+    if skillCooldowns["Q"] then return end
+    
+    local beam = Instance.new("Part")
+    beam.Name = "HolyBeam"
+    beam.Size = Vector3.new(5, 100, 5)
+    beam.Material = Enum.Material.Neon
+    beam.BrickColor = BrickColor.new("New Yeller")
+    beam.Transparency = 0.3
+    beam.Anchored = true
+    beam.CanCollide = false
+    beam.CFrame = CFrame.new(Mouse.Hit.Position + Vector3.new(0, 50, 0))
+    beam.Parent = workspace
+    
+    local beamLight = Instance.new("PointLight")
+    beamLight.Brightness = 10
+    beamLight.Color = Color3.fromRGB(255, 255, 0)
+    beamLight.Range = 30
+    beamLight.Parent = beam
+    
+    -- Damage enemies
+    for _, target in pairs(workspace:GetDescendants()) do
+        if target:FindFirstChild("Humanoid") and target ~= Character then
+            local targetRoot = target:FindFirstChild("HumanoidRootPart")
+            if targetRoot then
+                local distance = (targetRoot.Position - beam.Position).Magnitude
+                if distance <= 15 then
+                    target.Humanoid:TakeDamage(50)
+                end
+            end
+        end
+    end
+    
+    -- Fade out
+    for i = 0.3, 1, 0.05 do
+        beam.Transparency = i
+        beamLight.Brightness = beamLight.Brightness - 0.5
+        wait(0.05)
+    end
+    beam:Destroy()
+    
+    spawn(function() setCooldown("Q", skills["Q"].data.cooldown) end)
+end
+
+local function divineShield()
+    if skillCooldowns["E"] then return end
+    
+    local shield = Instance.new("Part")
+    shield.Name = "DivineShield"
+    shield.Size = Vector3.new(10, 10, 10)
+    shield.Shape = Enum.PartType.Ball
+    shield.Material = Enum.Material.ForceField
+    shield.BrickColor = BrickColor.new("Cyan")
+    shield.Transparency = 0.5
+    shield.CanCollide = false
+    shield.Parent = Character
+    
+    local shieldWeld = Instance.new("Weld")
+    shieldWeld.Part0 = RootPart
+    shieldWeld.Part1 = shield
+    shieldWeld.Parent = shield
+    
+    -- Make player invincible
+    local ff = Instance.new("ForceField")
+    ff.Parent = Character
+    
+    wait(5)
+    shield:Destroy()
+    ff:Destroy()
+    
+    spawn(function() setCooldown("E", skills["E"].data.cooldown) end)
+end
+
+local function healingAura()
+    if skillCooldowns["R"] then return end
+    
+    local healCircle = Instance.new("Part")
+    healCircle.Name = "HealCircle"
+    healCircle.Size = Vector3.new(30, 0.2, 30)
+    healCircle.Material = Enum.Material.Neon
+    healCircle.BrickColor = BrickColor.new("Lime green")
+    healCircle.Transparency = 0.5
+    healCircle.Anchored = true
+    healCircle.CanCollide = false
+    healCircle.Position = RootPart.Position - Vector3.new(0, 3, 0)
+    healCircle.Parent = workspace
+    
+    -- Heal nearby players
+    for i = 1, 10 do
+        for _, target in pairs(workspace:GetDescendants()) do
+            if target:FindFirstChild("Humanoid") then
+                local targetRoot = target:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    local distance = (targetRoot.Position - healCircle.Position).Magnitude
+                    if distance <= 15 then
+                        target.Humanoid.Health = math.(
+                     target.Humanoid.Health = math.(
+                           
+                      target.Humanoid.MaxHealth,
+                            target.Humanoid.Health + 10
+                        )
+                    end
+                end
+            end
+        end
+        
+        -- Pulse effect
+        local tween = TweenService:Create(
+            healCircle,
+            TweenInfo.new(0.5, Enum.EasingStyle.Sine),
+            {Size = Vector3.new(35, 0.2, 35), Transparency = 0.8}
+        )
+        tween:Play()
+        wait(0.5)
+        
+        healCircle.Size = Vector3.new(30, 0.2, 30)
+        healCircle.Transparency = 0.5
+    end
+    
+    healCircle:Destroy()
+    spawn(function() setCooldown("R", skills["R"].data.cooldown) end)
+end
+
+local function heavensGate()
+    if skillCooldowns["F"] then return end
+    
+    -- Create portal effect
+    local portal = Instance.new("Part")
+    portal.Name = "HeavensPortal"
+    portal.Size = Vector3.new(10, 15, 0.5)
+    portal.Material = Enum.Material.Neon
+    portal.BrickColor = BrickColor.new("White")
+    portal.Transparency = 0.3
+    portal.Anchored = true
+    portal.CanCollide = false
+    portal.CFrame = RootPart.CFrame * CFrame.new(0, 5, -5)
+    portal.Parent = workspace
+    
+        -- Portal particles
+    local particles = Instance.new("ParticleEmitter")
+    particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
+    particles.Color = ColorSequence.new(Color3.fromRGB(255, 255, 100))
+    particles.Rate = 100
+    particles.Lifetime = NumberRange.new(1, 2)
+    particles.Speed = NumberRange.new(5)
+    particles.Parent = portal
+    
+    wait(1)
+    
+    -- Teleport up
+    RootPart.CFrame = RootPart.CFrame + Vector3.new(0, 100, 0)
+    
+    -- Float down slowly
+    local floatVelocity = Instance.new("BodyVelocity")
+    floatVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+    floatVelocity.Velocity = Vector3.new(0, -5, 0)
+    floatVelocity.Parent = RootPart
+    
+    wait(3)
+    floatVelocity:Destroy()
+    portal:Destroy()
+    
+    spawn(function() setCooldown("F", skills["F"].data.cooldown) end)
+end
+
+local flightEnabled = false
+local function toggleFlight()
+    if skillCooldowns["X"] then return end
+    
+    flightEnabled = not flightEnabled
+    
+    if flightEnabled then
+        local bodyVelocity = Instance.new("BodyVelocity")
+        bodyVelocity.Name = "FlightVelocity"
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+        bodyVelocity.Parent = RootPart
+        
+        local bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.Name = "FlightGyro"
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro.D = 1000
+        bodyGyro.P = 10000
+        bodyGyro.CFrame = RootPart.CFrame
+        bodyGyro.Parent = RootPart
+        
+        
+        -- Flight controls
+        spawn(function()
+            while flightEnabled do
+                local camera = workspace.CurrentCamera
+                bodyGyro.CFrame = camera.CFrame
+                
+                local moveVector = Humanoid.MoveDirection * 50
+                bodyVelocity.Velocity = moveVector + Vector3.new(0, 20, 0)
+                
+                RunService.Heartbeat:Wait()
+            end
+        end)
+        else
+    if RootPart:FindFirstChild("FlightVelocity") then
+            RootPart.FlightVelocity:Destroy()
+        end
+        if RootPart:FindFirstChild("FlightGyro") then
+            RootPart.FlightGyro:Destroy()
+        end
+    end
+    spawn(function() setCooldown("X", skills["X"].data.cooldown) end)
+end
+
+local function purify()
+    if skillCooldowns["C"] then return end
+    
+    -- Remove all negative effects
+    for _, effect in pairs(Character:GetDescendants()) do
+        if effect:IsA("Fire") or effect:IsA("Smoke") then
+            effect:Destroy()
+        end
+    end
+    
+    -- Purify effect
+    local purifyBurst = Instance.new("Part")
+    purifyBurst.Name = "PurifyBurst"
+    purifyBurst.Size = Vector3.new(1, 1, 1)
+    purifyBurst.Shape = Enum.PartType.Ball
+    purifyBurst.Material = Enum.Material.Neon
+    purifyBurst.BrickColor = BrickColor.new("White")
+    purifyBurst.Transparency = 0
+    purifyBurst.Anchored = true
+    purifyBurst.CanCollide = false
+    purifyBurst.Position = RootPart.Position
+    purifyBurst.Parent = workspace
+    
+    local tween = TweenService:Create(
+        purifyBurst,
+        TweenInfo.new(1, Enum.EasingStyle.Quad),
+        {Size = Vector3.new(20, 20, 20), Transparency = 1}
+    )
+    tween:Play()
+    
+    -- Full heal
+    Humanoid.Health = Humanoid.MaxHealth
+    
+    wait(1)
+    purifyBurst:Destroy()
+    
+    spawn(function() setCooldown("C", skills["C"].data.cooldown) end)
+end
+
+-- Input Handling
+local function onKeyPress(key)
+    if not isAngel then return end
+    
+    key = key:upper()
+    
+    if key == "Q" then holyLight()
+    elseif key == "E" then divineShield()
+    elseif key == "R" then healingAura()
+    elseif key == "F" then heavensGate()
+    elseif key == "X" then toggleFlight()
+    elseif key == "C" then purify()
+    end
+end
+
+-- Setup skill buttons for mobile
+for key, skill in pairs(skills) do
+    skill.button.MouseButton1Click:Connect(function()
+        onKeyPress(key)
+    end)
+end
+
+-- PC controls
+Mouse.KeyDown:Connect(onKeyPress)
+
+-- Transform Button
+TransformButton.MouseButton1Click:Connect(function()
+    isAngel = not isAngel
+    
+    if isAngel then
+        ButtonIcon.Text = "😇"
+        ButtonLabel.Text = "HUMAN MODE"
+        ButtonStroke.Color = Color3.fromRGB(255, 255, 255)
+        
+        transformToAngel()
+        
+        -- Heaven flash effect
+        local flash = Instance.new("Frame")
+        flash.Size = UDim2.new(2, 0, 2, 0)
+        flash.Position = UDim2.new(-0.5, 0, -0.5, 0)
+        flash.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        flash.Parent = ScreenGui
+        
+       local flashTween = TweenService:Create(
+            flash,
+            TweenInfo.new(0.5, Enum.EasingStyle.Quad),
+            {BackgroundTransparency = 1}
+        )
+        flashTween:Play()
+        flashTween.Completed:Connect(function()
+            flash:Destroy()
+        end)
+    else
+    ButtonIcon.Text = "👼"
+        ButtonLabel.Text = "ANGEL MODE"
+        ButtonStroke.Color = Color3.fromRGB(255, 215, 0)
+        
+        revertFromAngel()
+        flightEnabled = false
+    end
+end)
+
+-- Animations
+spawn(function()
+    while true do
+        local tween = TweenService:Create(
+            GlowRing,
+            TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+            {Rotation = 360}
+        )
+        tween:Play()
+        tween.Completed:Wait()
+        GlowRing.Rotation = 0
+    end
+end)
+
+-- Opening animations
+TransformContainer.Size = UDim2.new(0, 0, 0, 0)
+SkillsPanel.Position = UDim2.new(1, 0, 0.5, -200)
+
+local openTween1 = TweenService:Create(
+    TransformContainer,
+    TweenInfo.new(0.8, Enum.EasingStyle.Back),
+    {Size = UDim2.new(0, 120, 0, 120)}
+)
+openTween1:Play()
+
+-- Respawn handler
+Player.CharacterAdded:Connect(function(newChar)
+    Character = newChar
+    Humanoid = newChar:WaitForChild("Humanoid")
+    RootPart = newChar:WaitForChild("HumanoidRootPart")
+    isAngel = false
+    ButtonIcon.Text = "👼"
+    ButtonLabel.Text = "ANGEL MODE"
+    SkillsPanel.Visible = false
+end)
+
+print("✅ Angel Transform Loaded!")
+print("👼 Press button to transform!")
+print("⌨️ Use Q,E,R,F,X,C for skills or tap buttons on mobile!")
